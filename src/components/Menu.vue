@@ -18,13 +18,9 @@
 </template>
 
 <script>
+    import { nextTick, onMounted, onUnmounted, ref, toRefs, watch  } from 'vue';
     export default {
       name: 'menubar',
-      data() {
-        return {
-          isSideBarOpen: false
-        };
-      },
       props: {
         isOpen: {
           type: Boolean,
@@ -72,64 +68,52 @@
           default: false
         }
       },
-      methods: {
-        openMenu() {
-          this.$emit('openMenu');
-          this.isSideBarOpen = true;
+      setup(props, { emit }) {
+        const bmBurgerButton = ref(null);
+        const isSideBarOpen = ref(false);
+        const sideNav = ref(null);
+        const { isOpen, right, width } = toRefs(props);
 
-          if (!this.noOverlay) {
-            document.body.classList.add('bm-overlay');
-          }
-          if (this.right) {
-            this.$refs.sideNav.style.left = 'auto';
-            this.$refs.sideNav.style.right = '0px';
-          }
-          this.$nextTick(function() {
-            this.$refs.sideNav.style.width = this.width
-              ? this.width + 'px'
-              : '300px';
-          });
-        },
-
-        closeMenu() {
-          this.$emit('closeMenu');
-          this.isSideBarOpen = false;
+        const closeMenu = () => {
+          emit('closeMenu');
+          isSideBarOpen.value = false;
           document.body.classList.remove('bm-overlay');
-          this.$refs.sideNav.style.width = '0px';
-        },
+          sideNav.value.style.width = '0px';
+        };
 
-        closeMenuOnEsc(e) {
+        const closeMenuOnEsc = (e) => {
           e = e || window.event;
           if (e.key === 'Escape' || e.keyCode === 27) {
-            this.closeMenu();
+            closeMenu();
           }
-        },
-        documentClick(e) {
-          let element = this.$refs.bmBurgerButton;
+        };
+
+        const documentClick = (e) => {
+          let element = bmBurgerButton;
           let target = null;
           if (e && e.target) {
             target = e.target;
           }
-
           if (
-            element &&
-            element !== target &&
-            !element.contains(target) &&
-            !this.hasClass(target,'bm-menu') &&
-            this.isSideBarOpen &&
-            !this.disableOutsideClick
+            element.value &&
+            element.value !== target &&
+            !element.value.contains(target) &&
+            !hasClass(target,'bm-menu') &&
+            isSideBarOpen.value &&
+            !props.disableOutsideClick
           ) {
-            this.closeMenu();
+            closeMenu();
           } else if (
-            element &&
-            this.hasClass(target,'bm-menu') &&
-            this.isSideBarOpen &&
-            this.closeOnNavigation
+            element.value &&
+            hasClass(target,'bm-menu') &&
+            isSideBarOpen.value &&
+            props.closeOnNavigation
           ) {
-            this.closeMenu();
+            closeMenu();
           }
-        },
-        hasClass(element, className) {
+        };
+
+        const hasClass = (element, className) => {
           do {
             if (element.classList && element.classList.contains(className)) {
               return true;
@@ -137,68 +121,91 @@
             element = element.parentNode;
           } while (element);
           return false;
-        },
-      },
+        };
 
-      mounted() {
-        if (!this.disableEsc) {
-          document.addEventListener('keyup', this.closeMenuOnEsc);
-        }
-      },
-      created: function() {
-        document.addEventListener('click', this.documentClick);
-      },
-      unmounted: function() {
-        document.removeEventListener('keyup', this.closeMenuOnEsc);
-        document.removeEventListener('click', this.documentClick);
-      },
-      watch: {
-        isOpen: {
-          deep: true,
-          immediate: true,
-          handler(newValue, oldValue) {
-            this.$nextTick(() => {
-              if (!oldValue && newValue) {
-                this.openMenu();
-              }
-              if (oldValue && !newValue) {
-                this.closeMenu();
-              }
+        const openMenu = () => {
+          emit('openMenu');
+          isSideBarOpen.value = true;
+          if (!props.noOverlay) {
+            document.body.classList.add('bm-overlay');
+          }
+          if (props.right) {
+            sideNav.value.style.left = 'auto';
+            sideNav.value.style.right = '0px';
+          }
+          nextTick(() => {
+            sideNav.value.style.width = width.value
+              ? width.value + 'px'
+              : '300px';
+          });
+        };
+
+        // Run created life cycle hook code
+        document.addEventListener('click', documentClick);
+
+        onMounted(() => {
+          if (!props.disableEsc) {
+            document.addEventListener('keyup', closeMenuOnEsc);
+          }
+        });
+
+        onUnmounted(() => {
+          if (!props.disableEsc) {
+            document.removeEventListener('keyup', closeMenuOnEsc);
+          }
+          document.removeEventListener('click', documentClick);
+        });
+
+        watch(isOpen.value, (isOpen, prevIsOpen) => {
+          nextTick(() => {
+            if (!prevIsOpen && isOpen) {
+              openMenu();
+            }
+            if (prevIsOpen && !isOpen) {
+              closeMenu();
+            }
+          })
+        }, {deep: true, immediate: true});
+
+        watch(right.value, (right, prevRight) => {
+          if (prevRight) {
+            nextTick(() => {
+              bmBurgerButton.value.style.left = 'auto';
+              bmBurgerButton.value.style.right = '36px';
+              sideNav.value.style.left = 'auto';
+              sideNav.value.style.right = '0px';
+              document.querySelector('.bm-burger-button').style.left = 'auto';
+              document.querySelector('.bm-burger-button').style.right = '36px';
+              document.querySelector('.bm-menu').style.left = 'auto';
+              document.querySelector('.bm-menu').style.right = '0px';
+              document.querySelector('.cross-style').style.right='250px';
             });
           }
-        },
-        right: {
-          deep: true,
-          immediate: true,
-          handler(oldValue, newValue) {
-            if (oldValue) {
-              this.$nextTick(() => {
-                this.$refs.bmBurgerButton.style.left = 'auto';
-                this.$refs.bmBurgerButton.style.right = '36px';
-                this.$refs.sideNav.style.left = 'auto';
-                this.$refs.sideNav.style.right = '0px';
-                document.querySelector('.bm-burger-button').style.left = 'auto';
-                document.querySelector('.bm-burger-button').style.right = '36px';
-                document.querySelector('.bm-menu').style.left = 'auto';
-                document.querySelector('.bm-menu').style.right = '0px';
-                document.querySelector('.cross-style').style.right='250px';
-              });
-            }
-            if (newValue) {
-              if (
-                this.$refs.bmBurgerButton.hasAttribute('style')
-              ) {
-                this.$refs.bmBurgerButton.removeAttribute('style');
-                this.$refs.sideNav.style.right = 'auto';
-                document
-                  .querySelector('.bm-burger-button')
-                  .removeAttribute('style');
-                document.getElementById('sideNav').style.right = 'auto';
-                document.querySelector('.cross-style').style.right='0px';
-              }
+          if (right) {
+            if (
+              bmBurgerButton.value && bmBurgerButton.value.hasAttribute('style')
+            ) {
+              bmBurgerButton.value.removeAttribute('style');
+              sideNav.value.style.right = 'auto';
+              document
+                .querySelector('.bm-burger-button')
+                .removeAttribute('style');
+              document.getElementById('sideNav').style.right = 'auto';
+              document.querySelector('.cross-style').style.right='0px';
             }
           }
-        }
+        }, {deep: true, immediate: true});
+
+        return {
+          bmBurgerButton,
+          closeMenu,
+          closeMenuOnEsc,
+          documentClick,
+          hasClass,
+          isSideBarOpen,
+          openMenu,
+          sideNav,
+        };
       }
     };
 </script>
