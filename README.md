@@ -141,7 +141,21 @@ You can control whether the sidebar is open or closed with the `isOpen` prop. Th
 ```javascript
 // To render the menu open
 
-<Slide isOpen>
+<Slide isOpen >
+
+ex:
+<template>
+  <button v-if="!isOpen" @click="isOpen=true">Open Menu</button>
+  <Slide :isOpen="isOpen" @closeMenu="isOpen = false">
+</template>
+
+// Component
+data() {
+  return {
+    isOpen: false
+  }
+}
+
 ```
 ### Menu events
 

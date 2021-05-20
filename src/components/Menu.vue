@@ -156,8 +156,8 @@
           document.removeEventListener('click', documentClick);
         });
 
-        watch(isOpen.value, (isOpen, prevIsOpen) => {
-          nextTick(() => {
+        watch(isOpen, (isOpen, prevIsOpen) => {
+          setTimeout(() => {
             if (!prevIsOpen && isOpen) {
               openMenu();
             }
@@ -165,7 +165,7 @@
               closeMenu();
             }
           })
-        }, {deep: true, immediate: true});
+        });
 
         watch(right.value, (right, prevRight) => {
           if (prevRight) {
